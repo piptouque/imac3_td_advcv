@@ -89,7 +89,6 @@ def smoothGaussian(im,sigma):
     return im_smooth
     
 def gradient(im_smooth):
-    # TODO:
     # utilisez scipy.ndimage.convolve pour calculer le gradient de l'image
     # assurez vous d'avoir péalablement converti l'image en float sans quoi vous n'aurez pas le résultat souhaité
     # verifiez que vous avez n'avez pas calculé le vecteur inverse du gradient i.e que le flèches pointent bien vers les zones plus claires
@@ -179,6 +178,7 @@ def hysteresis(maxi, norm_gradient, seuil1, seuil2) :
     #   (see http://docs.scipy.org/doc/numpy/user/basics.indexing.html#index-arrays in case 
     #    the index array is multidimensional)
     print(number_curves)
+    print(len(curve_maxima))
     edges = curve_maxima[m_curves]
     print(norm_gradient.shape)
     print(edges.shape)
@@ -249,7 +249,7 @@ def main():
     im = imageio.imread('einstein.jpg')
     sigma=2
     seuil1 = 30
-    seuil2 = 100
+    seuil2 = 200
     # La partie d'affichage de canny() ne fonctionne pas sur ma machine.
     display = False
     edges = canny(im, sigma, seuil1=seuil1, seuil2=seuil2, display=display)
