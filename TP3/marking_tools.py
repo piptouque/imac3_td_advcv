@@ -11,7 +11,7 @@ class marking():
         self.marks=[]  
         
     def add(self,coef,student_solution,exact_solution,duration=None,max_duration=None,relative_coef_duration=0.5,tol=1e-8,nbdiff_max=0,isimage=False):
-        if     student_solution is None:
+        if student_solution is None:
             valid=False
             print('not answered')
         else:
@@ -27,7 +27,7 @@ class marking():
                 nbdiff=np.sum(diff>tol)
                 valid= (nbdiff<=nbdiff_max )
                 if nbdiff>0 and valid:
-                    print("WARNING : found " +str(nbdiff)+ " differences , but still accepted")
+                    print('WARNING : found '+str(nbdiff)+ ' differences , but still accepted')
                 if not(valid):
                     print('found ' +str(nbdiff) +' values with difference with exact solution is  greater that '+str(tol))
                     print('the greatest error is '+str(max_error))
@@ -36,7 +36,7 @@ class marking():
                     
                     cov_mat = np.cov([exact_solution.flatten(),student_solution.flatten()])
                     if np.min(np.linalg.eig(cov_mat)[0])<1e-4:
-                        print("seem like there is a affine relationship between your data and the expected ones")
+                        print('seem like there is a affine relationship between your data and the expected ones')
                         plt.plot(exact_solution.flatten(),student_solution.flatten())
                     
                     if isimage: 
@@ -50,10 +50,12 @@ class marking():
                         plt.show()
             except:
                 valid=0
-                print("Unexpected error:", sys.exc_info()[0],sys.exc_info()[1])
-            if duration is not None and max_duration is not None and duration > max_duration:
-                print('executation time ('+str(duration)+') expected to be less than ' + str(max_duration))
-                valid=valid*relative_coef_duration
+                print('Unexpected error:', sys.exc_info()[0],sys.exc_info()[1])
+
+            if duration is not None and max_duration is not None:
+                if duration>max_duration:
+                    print('executation time ('+str(duration)+') expected to be less than ' + str(max_duration))
+                    valid=valid*relative_coef_duration
         
         self.marks.append({'coef':coef,'valid':valid})
         print('question '+str(len(self.marks))+": "+str(valid*coef)+"/"+str(coef))
@@ -61,7 +63,7 @@ class marking():
     def print_note(self):
         note=np.sum([m['coef']*m['valid'] for m in self.marks])
         total=np.sum([m['coef'] for m in self.marks])
-        print("note= "+str(note)+"/"+str(total))
+        print('note= '+str(note)+'/'+str(total))
         return note
         
 def timer(f,nb=1):    

@@ -4,7 +4,7 @@ import time
 from marking_tools import *
 
 
-from tp3_sujet import *
+from tp2_sujet import *
 
 
 def test():
@@ -13,8 +13,6 @@ def test():
     im1=np.mean(np.array(imread('Image1.png')).astype(np.float),axis=2)
     im2=np.mean(np.array(imread('Image2.png')).astype(np.float),axis=2)
 
-    
-    
     m=marking()    
     im_x,im_y=smoothedGradient(im1,sigma=2) 
     m.add(1, im_x[200:205,300:302],[[-0.67794561, -3.19281727],
@@ -41,19 +39,19 @@ def test():
     plt.imshow(R,cmap=plt.cm.Greys_r)
     #imsave('harris_response.png',(R-R.min())/(np.max(R)-np.min(R)))
     
-     
+
     corners1=HarrisCorners(im1,sigma1=2,sigma2=3,k=0.06)
-    m.add(2,corners1[:10,:],[[ 46, 223],
-                             [ 51, 216],
-                             [ 56, 166],
-                             [ 56, 175],
-                             [ 56, 316],
-                             [ 61, 159],
-                             [ 63, 250],
-                             [ 65, 256],
-                             [ 67, 303],
-                             [ 69, 283]])      
-    
+    m.add(2, corners1[:10, :], [[ 46, 223],
+                  [ 51, 216],
+                  [ 56, 166],
+                  [ 56, 175],
+                  [ 56, 316],
+                  [ 61, 159],
+                  [ 63, 250],
+                  [ 65, 256],
+                  [ 67, 303],
+                  [ 69, 283]])
+
     displayPeaks(im1,corners1)
     
     
@@ -85,11 +83,9 @@ def test():
                          #[ 91.33333333,  92.33333333,  92.33333333]]])   
     
     patches2=extractPatches(im2,corners2,N)
-    
-    
-    
+
     t1=np.arange(0,4*5*5).reshape(4,5,5)
-    t2=t1-5    
+    t2=t1-5
     tab=SSDTable(t1,t2)
     
     m.add(2,tab,[[    625.,   10000.,   50625.,  122500.],

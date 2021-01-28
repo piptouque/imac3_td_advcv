@@ -8,11 +8,12 @@ import pickle
 from scipy import sparse
 from scipy.sparse import diags
 from scipy.sparse.linalg import spsolve,cg
+from skimage.feature import peak_local_max
 
 def pause():
     plt.draw() 
     plt.pause(0.001)
-    raw_input("Press Enter to continue...")  
+    input("Press Enter to continue...")
     
 def smoothGaussian(im,sigma):
     N=4*sigma
@@ -31,22 +32,31 @@ def gradient(im_smooth):
 def smoothedGradient(im,sigma):
     """this function computes a smooth version of the image image using the convolution by a gaussian with standard deviation sigma 
     and then compue the gradient in the x and y direction using kernels [1,0,-1] ans its transpose"""
-    #TODO: Code this function (you can use the functions above ) 
-   
-    return im_x,im_y
+    #TODO: Code this function (you can use the functions above )
+    im_smooth = smoothGaussian(im, sigma)
+    return gradient(im_smooth)
 
 def HarrisScore(im,sigma1,sigma2,k=0.06):   
     """this function compute the harris score for each pixel in the image and return the result as an image"""
-    #TODO implement this function 
-   
-    return R
+    #TODO implement this function
+    i_x, i_y = smoothedGradient(im, sigma1)
+    # compute m11, m12 and m22
+    m11 = smoothGaussian(i_x ** 2, sigma2)
+    m12 = smoothGaussian(i_x * i_y, sigma2)
+    m22 = smoothGaussian(i_y ** 2, sigma2)
+    return m11 * m22 - m12 ** 2 - k * ((m11 + m22) ** 2)
 
 def HarrisCorners(im,sigma1,sigma2,k=0.06):
-    """this function extract local maximums ion the harris score image that are above 0.005 times the maxium of R and a local miximum in a region a radius 2"""
-    R= HarrisScore(im,sigma1=sigma1,sigma2=sigma2,k=0.06)
-    import skimage.feature
-    #TODO : implement this function by calling skimage.feature.peak.peak_local_max
-    
+    """this function extract local maxima in the harris score image
+    that are above 0.005 times the maximum of R
+    and a local maximum in a region a radius 2"""
+    R = HarrisScore(im, sigma1=sigma1, sigma2=sigma2, k=k)
+    peaks = peak_local_max(R,
+                           min_distance=2,
+                           threshold_rel=0.005
+                           )
+    # sort them by abscissa, then ordinates.
+    peaks = peaks[np.lexsort((peaks[:, 1], peaks[:, 0]))]
     return peaks
 
 def displayPeaks(im,peaks):
@@ -65,26 +75,43 @@ def extractPatches(im ,points,N):
     """this function extracts patches of size N by N centered around each point privded in the matrix points
     and return a nb_points by N by N 3D array """
     assert(N%2==1)
-    radius=(N-1)/2
+    radius=(N-1)//2
     patches=np.zeros((points.shape[0],N,N))
-    for i,p in enumerate (points):        
+    for i,p in enumerate (points):
         if p[0]-radius>=0 and p[0]+radius<im.shape[0] and p[1]-radius>=0 and p[1]+radius<im.shape[1]:
-            patches[i,:,:]=im[p[0]-radius:p[0]+radius+1,p[1]-radius:p[1]+radius+1]            
+            patches[i, :, :] = im[p[0] - radius: p[0] + radius + 1,
+                               p[1] - radius: p[1] + radius + 1]
             
     assert(patches.shape[1]==N)
     assert(patches.shape[2]==N)
     return patches
             
-
-
 def SSDTable(patches1,patches2):
     """this function computes the sum of square differences between each pair of patches"""
-    #TODO implement this function  
- 
+    table = np.empty((patches1.shape[0], patches2.shape[0]))
+    for i in range(table.shape[0]):
+        for j in range(table.shape[1]):
+            table[i, j] = np.linalg.norm(patches1[i] - patches2[j]) ** 2
     return table
-        
-        
-        
+
+
+def NCCTable(patches1, patches2):
+    """this function computes 1 minus the cross correlation between patches"""
+    table = np.empty((patches1.shape[0], patches2.shape[0]))
+    for i in range(table.shape[0]):
+        x = patches1[i]
+        mu_x = np.mean(x)
+        x_shift = x - mu_x
+        sigma_x = np.linalg.norm(x_shift)
+        for j in range(table.shape[1]):
+            y = patches2[j]
+            mu_y = np.mean(y)
+            y_shift = y - mu_y
+            sigma_y = np.linalg.norm(y_shift)
+            table[i, j] = 1 - np.sum(x_shift * y_shift) / (sigma_x * sigma_y)
+    return table
+
+
 def  displayPatch(im,corners,patches):
     plt.figure()
     ax=plt.subplot(1,1,1)
@@ -101,10 +128,7 @@ def  displayPatch(im,corners,patches):
     plt.imshow(patches[i,:,:],cmap=plt.cm.Greys_r)
 
 
-        
-
-
-def displayMatches(im1,im2,p1,p2):       
+def displayMatches(im1,im2,p1,p2):
     plt.figure()
     plt.subplot(1,2,1)
     plt.imshow(im1,cmap=plt.cm.Greys_r)     
@@ -145,13 +169,13 @@ def extractMatches(table,threshold=0.7):
     bestscore2=np.min(table_copy,axis=1)
     valid2=bestscore<0.9*bestscore2      
        
-    valid=valid1&valid2    
+    valid=valid1&valid2
     return np.nonzero(valid)[0], bestmatch1[valid]
 
 def main():
     plt.ion()
-    im1=np.mean(np.array(imread('Image1.jpg')).astype(np.float),axis=2)
-    im2=np.mean(np.array(imread('Image2.jpg')).astype(np.float),axis=2)
+    im1=np.mean(np.array(imread('Image1.png')).astype(np.float),axis=2)
+    im2=np.mean(np.array(imread('Image2.png')).astype(np.float),axis=2)
     
     
     im_x,im_y=smoothedGradient(im1,sigma=2) 
@@ -194,8 +218,7 @@ def main():
            #[ 67, 303],
            #[ 69, 283]])    
     displayPeaks(im1,corners1)
-    
-    
+
     corners2=HarrisCorners(im2,sigma1=2,sigma2=3,k=0.06)
     #corners2[:10,:]
     #array([[ 56,  64],
@@ -211,7 +234,7 @@ def main():
     displayPeaks(im2,corners2)
     
     N=21
-    patches1=extractPatches(im1,corners1,N)    
+    patches1=extractPatches(im1,corners1,N)
     #displayPatch(im1,corners1,patches1)
     
     extractPatches(im1,np.array([[150,300],[200,270]]),3) 
@@ -225,9 +248,7 @@ def main():
     
     patches2=extractPatches(im2,corners2,N)
     
-    
-    
-    t1=np.arange(0,4*5*5).reshape(4,5,5)
+    t1=np.arange(0,4*5*5).reshape(4, 5, 5)
     t2=t1-5    
     SSDTable(t1,t2)
     #array([[    625.,   10000.,   50625.,  122500.],
@@ -243,13 +264,6 @@ def main():
     displayMatches(im1,im2,p1,p2)
     plt.ioff()
     displayMatches2(im1,im2,p1,p2)
-    
-    
-    
-
-    
-   
-    
 
 
 if __name__ == "__main__":
