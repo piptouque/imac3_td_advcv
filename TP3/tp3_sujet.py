@@ -19,7 +19,7 @@ from numpy import sin ,cos,ceil ,floor
 def pause():
     plt.draw() 
     plt.pause(0.001)
-    raw_input("Press Enter to continue...")  
+    input("Press Enter to continue...")
     
 def plotLine(rho,theta,xmin,xmax,ymin,ymax,color='b'):    
     """display a line given its angle and its distance to the origin"""
@@ -41,67 +41,74 @@ def distancePointsLine(points, rho,theta):
     """this function computes the set of euclidian distances between a set of points and a line 
     parameterized with the angle theta (between the x axis and the vector joining the origin 
     and the projection of the origin on the line) and the distance to the origin rho"""    
-    #TODO code this function
     distances = np.abs(points[:, 0] * np.cos(theta) + points[:, 1] * np.sin(theta) - rho)
     return distances
     
 
 def countInliersLine(points, rho,theta,tau):
     """this function compute the number of inliers for a line given a distance threshold tau"""
-    #TODO code this function
     distances = distancePointsLine(points, rho, theta)
     inliers_count = np.count_nonzero(distances < tau)
     return inliers_count
 
 def h(x,tau):    
     """this function computes the smooth function h given in the slides that goes from 1 at location 0 to 0 at location tau"""
-    #TODO implement this function, code it for x a vector 
     # you can use if/else with a loop over the elements of the vector , or
     # alternatively use a vectorized formulation by creating first a boolean vector b=x<tau that you then multiply by the polynome
-    def _h
-    return hx 
+    x_t = np.less(np.abs(x), tau)
+    return x_t * np.power((1 - np.power(x / tau, 2)), 3)
+
 
 def smoothLineScore(points, rho,theta,tau):
     """this function implements the smoothed score function of a line"""
-    # TODO implement this function
-    
-    return smooth_score
+    return np.sum(h(distancePointsLine(points, rho, theta), tau), axis=0)
+
 
 def getRhos(points,theta):
-    """given an angle theta, this function computes the signed distance rho of the line with angle
-    theta passing through each point"""
-    # TODO implement this function
-   
-    return rhos
+    """given an angle theta, this function computes the signed distance rho
+    of the line with angle theta passing through each point"""
+    return points[:, 0] * np.cos(theta) + points[:, 1] * np.sin(theta)
+
 
 def rhoIdsFromRhos(rhos,min_rho,max_rho,nb_rhos):
-    """given rhos, this function get the index location of these rhos in the discrete rho grid ,
-    instead of returning an integer index of the nearest rho in rho_grid, it provides a float number
-    such that the user of the function can decide to use round, floor or ceil afterward"""
+    """given rhos, this function gets the index location of these rhos
+    in the discrete rho grid,
+    instead of returning an integer index of the nearest rho in rho_grid,
+    it provides a float number such that the user of the function
+    can decide to use round, floor or ceil afterward"""
     delta_rho=(max_rho-min_rho)/(nb_rhos-1)
     return (rhos-min_rho)/delta_rho
 
-
     
 def scoresBruteForce(points,tau,nb_thetas,min_rho,max_rho,nb_rhos):
-    """this function loops over all angle/rho pairs and fill the score array using the inliers count"""
+    """this function loops over all angle/rho pairs
+    and fills the score array using the inliers count"""
     
-    rho_grid,theta_grid=getRhoAndThetaGrid(nb_thetas,min_rho,max_rho,nb_rhos)  
-    #TODO finish coding this function
- 
+    rhos, thetas = getRhoAndThetaGrid(nb_thetas,min_rho,max_rho,nb_rhos)
+    scores = np.zeros((rhos.shape[0], thetas.shape[0]))
+    it_rho = np.nditer(rhos, flags=['f_index'])
+    it_theta = np.nditer(thetas, flags=['f_index'])
+    for rho in it_rho:
+        for theta in it_theta:
+            scores[it_rho.index, it_theta.index] = countInliersLine(points, rho, theta, tau)
     return scores
 
 def scoresSmoothBruteForce(points,tau,nb_thetas,min_rho,max_rho,nb_rhos):    
-    """this function loops over all angle/rho pairs and fill the score array using the smoothed score,
+    """this function loops over all angle/rho pairs and fills
+    the score array using the smoothed score,
     the column corresponds to theta , the line to rho"""
-    rho_grid,theta_grid=getRhoAndThetaGrid(nb_thetas,min_rho,max_rho,nb_rhos) 
+    rhos, thetas = getRhoAndThetaGrid(nb_thetas,min_rho,max_rho,nb_rhos)
     
-    #TODO finish coding this function
-
-    # if you enjoy using numpy broadcasting you can avoid loops...but you should probably keep that for the end    
-
-    
-    return scores 
+    # if you enjoy using numpy broadcasting you can avoid loops...but you should probably keep that for the end
+    rho_grid = np.zeros_like(thetas)
+    rho_grid = rho_grid[:, np.newaxis] + rhos
+    theta_grid = np.zeros_like(rho_grid).transpose()
+    theta_grid = (theta_grid + thetas).transpose()
+    point_grid = np.zeros(theta_grid.shape + points.shape)
+    point_grid = (point_grid + points)
+    point_grid = point_grid.transpose(2, 3, 0, 1)
+    scores = smoothLineScore(point_grid, rho_grid, theta_grid, tau)
+    return scores
 
 def getRhoAndThetaGrid(nb_thetas,min_rho,max_rho,nb_rhos):
     theta_grid=np.pi*np.arange(0,nb_thetas)/nb_thetas 
@@ -112,25 +119,35 @@ def getRhoAndThetaGrid(nb_thetas,min_rho,max_rho,nb_rhos):
     return rho_grid,theta_grid
 
 def scoresHough(points,tau,nb_thetas,min_rho,max_rho,nb_rhos):
-    """this function compute the same score table as the scoresBruteForce function (inliers count)
-    but avoid looping over all rhos for each theta by computing an interval of valid rhos (see slides)"""
-    
-    
-    rho_grid,theta_grid=getRhoAndThetaGrid(nb_thetas,min_rho,max_rho,nb_rhos)   
-    # TODO: implement this function, you can call getRhos 
+    """this function compute the same score table as
+    the scoresBruteForce function (inliers count)
+    but avoid looping over all rhos for each theta
+    by computing an interval of valid rhos (see slides)"""
+    _, thetas = getRhoAndThetaGrid(nb_thetas,min_rho,max_rho,nb_rhos)
     # avoiding loops seems quite difficult here so go for loops
-    # be careful with the "range" function the range(m,n) will give number ranging from m to n-1 and not to n  
-    
-
+    # be careful with the "range" function the range(m,n) will give number ranging from m to n-1 and not to n
+    scores = np.zeros((_.shape[0], thetas.shape[0]))
+    it_theta = np.nditer(thetas, flags=['f_index'])
+    for theta in it_theta:
+        rhos = getRhos(points, theta)
+        it_rho = np.nditer(rhos, flags=['f_index'])
+        rho_ids = np.round(rhoIdsFromRhos(rhos, min_rho, max_rho, nb_rhos)).astype(int)
+        for rho in it_rho:
+            scores[rho_ids[it_rho.index], it_theta.index] = countInliersLine(points, rho, theta, tau)
     return scores
 
 def scoresHoughSmooth(points,tau,nb_thetas,min_rho,max_rho,nb_rhos):
     """this function compute the same score table as the scoresSmoothBruteForce function 
     but avoid looping over all rhos for each theta by computing an interval of valid rhos"""    
-    rho_grid,theta_grid=getRhoAndThetaGrid(nb_thetas,min_rho,max_rho,nb_rhos)  
-    
-     #TODO: implement this function, you can call getRhos  and h
-
+    _, thetas=getRhoAndThetaGrid(nb_thetas,min_rho,max_rho,nb_rhos)
+    scores = np.zeros((_.shape[0], thetas.shape[0]))
+    it_theta = np.nditer(thetas, flags=['f_index'])
+    for theta in it_theta:
+        rhos = getRhos(points, theta)
+        it_rho = np.nditer(rhos, flags=['f_index'])
+        rho_ids = np.round(rhoIdsFromRhos(rhos, min_rho, max_rho, nb_rhos)).astype(int)
+        for rho in it_rho:
+            scores[rho_ids[it_rho.index], it_theta.index] = smoothLineScore(points, rho, theta, tau)
     return scores
 
 
@@ -166,16 +183,6 @@ def displayResult(points,peak_rhos,peak_thetas,tau):
 def main():
     plt.ion()
 
-    with open('tp4_hough.pkl', 'rb') as f:
-        points,\
-        scores_brute_force,\
-        scores_hough,\
-        peak_rhos,peak_thetas,\
-        scores_smoothed_brute_force,\
-        scores_hough_smooth,\
-        peak_rhos_smooth,\
-        peak_thetas_smooth= pickle.load(f)
-
     n=100
     sigma=0.03
     random=xorshift()# use custom pseudo reandom to get repeatable results
@@ -198,8 +205,7 @@ def main():
     nb_rhos=100
     nb_thetas=150  
     tau=10*sigma
- 
-    
+
     
     distancePointsLine(points[1:5,:], 2,0.3)
     #array([ 0.02298727,  0.60614286,  0.87389925,  0.04036134])
@@ -256,17 +262,6 @@ def main():
     plt.ioff()
     displayResult(points,peak_rhos_smooth,peak_thetas_smooth,tau)
     pause()
-   
-    with open('tp4_hough.pkl', 'wb') as f:
-        l=[points.astype(np.float16),\
-           scores_brute_force.astype(np.uint8),\
-           scores_hough.astype(np.uint8),\
-           peak_rhos,peak_thetas,\
-           scores_smoothed_brute_force.astype(np.float16),\
-           scores_hough_smooth.astype(np.float16),\
-           peak_rhos_smooth,\
-           peak_thetas_smooth]
-        pickle.dump(l,f)   
-    
+
 if __name__ == "__main__":
     main()
